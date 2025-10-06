@@ -4,8 +4,6 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <signal.h>
-#include <sys/ioctl.h>
-#include <termios.h>
 
 #define PROMPT "## 3230yash >> "
 #define MAX_CMDS 30
@@ -237,6 +235,22 @@ int readline(char *buffer, size_t size) {
   }
 }
 
+void print_tokens(char *tokens) {
+  char *p = tokens;
+  do {
+    if (*p == '\0') {
+      putc('\\', stdout);
+      putc('0', stdout);
+    } else {
+      putc(*p, stdout);
+    }
+    p++;
+  } while (*p != '\0' || p[-1] != '\0');
+  putc('\\', stdout);
+  putc('0', stdout);
+  putc('\n', stdout);
+}
+
 void init_commands(Command *cmd, char* buffer) {
   // Initialize commands here
   memset(cmd->pids, 0, sizeof(cmd->pids));
@@ -246,19 +260,6 @@ void init_commands(Command *cmd, char* buffer) {
 int main(int argc, char *argv[]) {
   char buffer[1025];
   pid_t master_pid = getpid();
-
-  // create a session
-  /*
-  if (setsid() == -1) {
-    perror("Fatal error creating session");
-    exit(EXIT_FAILURE);
-  }
-
-  if (ioctl(STDIN_FILENO, TIOCSCTTY, 0) == -1) {
-    perror("ioctl TIOCSCTTY failed");
-    exit(EXIT_FAILURE);
-  }
-  */
 
   signal(SIGINT, handle_SIGINT);
 
@@ -289,16 +290,10 @@ int main(int argc, char *argv[]) {
           if (i == 0 && cmd.pipe_count > 1) {
             dup2(pipes[i][1], STDOUT_FILENO);
           } else if (i == cmd.pipe_count - 1) {
-            dup2(pipes[i][0], STDIN_FILENO);
+            dup2(pipes[i - 1][0], STDIN_FILENO);
           } else {
             dup2(pipes[i][1], STDOUT_FILENO);
             dup2(pipes[i - 1][0], STDIN_FILENO);
-          }
-
-          if (i == 0){
-            setpgid(0, 0);
-          } else {
-            setpgid(0, cmd.pids[0]);
           }
 
           // restore SIGINT handler to default
