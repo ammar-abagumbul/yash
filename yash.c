@@ -4,7 +4,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#define PREFIX "## 3230yash >> "
+#define PROMPT "## 3230yash >> "
 #define MAX_CMDS 30
 #define MAX_TOKEN_LEN 1025
 
@@ -224,19 +224,20 @@ int readline(char *buffer, size_t size) {
       return 0;
     return 1;
   } else {
-    perror("Error reading input\n");
-    return 0;
+    exit(0);
   }
 }
 
 int main(int argc, char *argv[]) {
   char buffer[1025];
   do {
-    printf("%s\n", PREFIX);
-    if (readline(buffer, sizeof(buffer)) == 1) // Do nothing
-    {
+    printf("%s", PROMPT);
+
+    if (readline(buffer, sizeof(buffer)) == 1) {
+
       if (!validate_cmd(buffer))
         continue;
+
       Command cmd;
       tokenize(&cmd, buffer);
 
@@ -252,13 +253,13 @@ int main(int argc, char *argv[]) {
       for (int i = 0; i < cmd.pipe_count; i++) {
         pid_t pid = fork();
         if (pid == 0) {
-          if (i == 0) {
+          if (i == 0 && cmd.pipe_count > 1) {
             dup2(pipes[i][1], STDOUT_FILENO);
           } else if (i == cmd.pipe_count - 1) {
             dup2(pipes[i][0], STDIN_FILENO);
           } else {
             dup2(pipes[i][1], STDOUT_FILENO);
-            dup2(pipes[i][0], STDIN_FILENO);
+            dup2(pipes[i - 1][0], STDIN_FILENO);
           }
           // close all fds in child
           for (int k = 0; k < cmd.pipe_count; k++) {
@@ -270,20 +271,31 @@ int main(int argc, char *argv[]) {
             perror("Fatal error executing command");
             exit(EXIT_FAILURE);
           }
-        } else {
-          for (int k = 0; k < cmd.pipe_count; k++) {
-            close(pipes[k][0]);
-            close(pipes[k][1]);
-          }
+        } else if (pid < 0) {
           perror("Fatal error creating child process");
           exit(EXIT_FAILURE);
         }
       }
 
+      // close all fds in parent
+      for (int k = 0; k < cmd.pipe_count; k++) {
+        close(pipes[k][0]);
+        close(pipes[k][1]);
+      }
+
+      // wait for all children to finish
+      for (int i = 0; i < cmd.pipe_count; i++) {
+        waitpid(-1, NULL, 0);
+      }
+
       // free tokens
       free_tokens(cmd.pipes, cmd.pipe_count);
     }
+    // cleanup buffer
+    memset(buffer, 0, sizeof(buffer));
+    putc('\n', stdout);
   } while (1);
 
   return 0;
 }
+
