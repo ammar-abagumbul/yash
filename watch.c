@@ -1,4 +1,3 @@
-
 #include "yash.h"
 #include <stdlib.h>
 #include <time.h>
@@ -66,7 +65,7 @@ int main(int argc, char * argv[]) {
     }
   } else if (pid > 0)  {
     int status;
-    pid_t c_pid = waitpid(pid, &status, WNOHANG);
+    char state = 'R';
 
     snprintf(stat_path, sizeof(stat_path), "/proc/%d/stat", pid);
 
