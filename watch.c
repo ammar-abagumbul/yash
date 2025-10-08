@@ -29,7 +29,7 @@ int main(int argc, char * argv[]) {
   FILE *fp;
 
   if (pid == 0) {
-    if (execvp(argv[1], argv) == -1) {
+    if (execvp(argv[1], argv + 1) == -1) {        // Shift by one to escape watch command
       perror("Failed to execute command");
       return -1;
     }
