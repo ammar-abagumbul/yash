@@ -74,13 +74,15 @@ int main(int argc, char *argv[]) {
         pid_t pid = fork();
         if (pid == 0) {
 
-          if (i == 0 && cmd.pipe_count > 1) {
-            dup2(pipes[i][1], STDOUT_FILENO);
-          } else if (i == cmd.pipe_count - 1) {
-            dup2(pipes[i - 1][0], STDIN_FILENO);
-          } else {
-            dup2(pipes[i][1], STDOUT_FILENO);
-            dup2(pipes[i - 1][0], STDIN_FILENO);
+          if (cmd.pipe_count > 1) {
+            if (i == 0) {
+              dup2(pipes[i][1], STDOUT_FILENO);
+            } else if (i == cmd.pipe_count - 1) {
+              dup2(pipes[i - 1][0], STDIN_FILENO);
+            } else {
+              dup2(pipes[i][1], STDOUT_FILENO);
+              dup2(pipes[i - 1][0], STDIN_FILENO);
+            }
           }
 
           // restore SIGINT handler to default
@@ -94,8 +96,9 @@ int main(int argc, char *argv[]) {
 
           char **args = parse_args(cmd.pipes[i]);
           if (execvp(args[0], args) == -1) {
-            perror("Fatal error executing command");
-            exit(EXIT_FAILURE);
+            fprintf(stderr, "Fatal error executing command\n");
+            // custom exit status
+            exit(127);
           }
         } else if (pid > 0) {
           cmd.pids[i] = pid;

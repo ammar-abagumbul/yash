@@ -11,6 +11,13 @@
 #define PROMPT "## 3230yash >> "
 #define MAX_CMDS 30
 #define MAX_TOKEN_LEN 1025
+#define EXIT_CMD "exit"
+
+enum {
+  V_EXIT_REQUEST = 0, // valid exit request
+  E_EXIT_REQUEST,     // invalid exit request
+  NO_EXIT_REQUEST     // no request
+};
 
 typedef struct {
   int pipe_count;
