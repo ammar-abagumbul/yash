@@ -1,4 +1,20 @@
 #include "yash.h"
+#include <stdlib.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+//TODO: standardize error printing: use fprintf(stderr, "Error message\n");
+
+int valid_exit_request(const Command *cmd) {
+  if (strcmp(EXIT_CMD, cmd->pipes[0]) == 0) {
+    if (count_args(cmd->pipes[0]) == 1) {
+      return V_EXIT_REQUEST;
+    }
+    printf("Invalid use of exit, exit does not accept arguments.\n");
+    return E_EXIT_REQUEST;
+  }
+  return NO_EXIT_REQUEST;
+}
 
 int main(int argc, char *argv[]) {
   char buffer[1025];
@@ -11,11 +27,39 @@ int main(int argc, char *argv[]) {
 
     if (readline(buffer, sizeof(buffer)) == 1) {
 
-      if (!validate_cmd(buffer))
-        continue;
-
       Command cmd;
       init_commands(&cmd, buffer);
+
+      // check for exit
+      int req = valid_exit_request(&cmd);
+      if (req == V_EXIT_REQUEST) {
+        //TODO: check for any resources to be released
+        exit(EXIT_SUCCESS);
+      } else if (req == E_EXIT_REQUEST) {
+        continue;
+      }
+
+      // check for watch
+      if (strcmp(cmd.pipes[0], "watch") == 0) {
+        //TODO: implement watch command
+        if (cmd.pipe_count > 1) {
+          fprintf(stderr, "watch command does not support piping\n");
+          continue;
+        }
+        char **args = parse_args(cmd.pipes[0]);
+        pid_t pid = fork();
+        if (pid == 0) {
+          execvp("./watch", args);
+          perror("error executing watch");
+          exit(EXIT_FAILURE);
+        } else if (pid > 0) {
+          register_for_report(&pid, 1);
+        } else {
+          perror("fork");
+          exit(EXIT_FAILURE);
+        }
+        continue;
+      }
 
       // create pipes
       int pipes[cmd.pipe_count][2];
