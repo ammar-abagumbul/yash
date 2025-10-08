@@ -34,5 +34,7 @@ char **parse_args(const char *buffer);
 int readline(char *buffer, size_t size);
 void print_tokens(char *tokens);
 void init_commands(Command *cmd, char* buffer);
+int count_args(const char* p);
+void register_for_report(const pid_t* cmd, int count);
 
 #endif /* SHELL_H */

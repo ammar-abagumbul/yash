@@ -115,20 +115,7 @@ int main(int argc, char *argv[]) {
       }
 
       // wait for all children to finish
-      for (int i = 0; i < cmd.pipe_count; i++) {
-        int status;
-        waitpid(cmd.pids[i], &status, 0);
-
-        if (WIFSIGNALED(status)) {
-          int sig = WTERMSIG(status);
-          printf("Child %d terminated by signal %d (%s)\n", i+1, sig, strsignal(sig));
-
-          if (WCOREDUMP(status))
-            printf(" (Core dumped)\n");
-        } else if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
-          printf("Child %d exited with status %d\n", i+1, WEXITSTATUS(status));
-        }
-      }
+      register_for_report(cmd.pids, cmd.pipe_count);
 
       // free tokens
       free_tokens(cmd.pipes, cmd.pipe_count);
